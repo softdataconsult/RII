@@ -1,0 +1,6 @@
+^data-raw$
+^README\.md$
+^\.Rproj\.user$
+^.*\.Rproj$
+^\.github$
+^CITATION\.cff$

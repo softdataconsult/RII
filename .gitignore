@@ -1,0 +1,41 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session data
+.RData
+.RDataTmp
+
+# User-specific files
+.Ruserdata
+
+# Example code produced during R CMD check
+*-Ex.R
+
+# RStudio files
+.Rproj.user/
+*.Rproj
+
+# Rendered vignette outputs (rebuilt on install; keep the .Rmd source only)
+vignettes/*.html
+vignettes/*.pdf
+
+# knitr / R Markdown caches and intermediates
+*_cache/
+/cache/
+*.utf8.md
+*.knit.md
+
+# Environment variables / secrets
+.Renviron
+.httr-oauth
+
+# pkgdown site output
+docs/
+
+# R CMD build/check artifacts
+*.tar.gz
+*.Rcheck/
+
+# macOS
+.DS_Store

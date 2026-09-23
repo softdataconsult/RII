@@ -1,0 +1,228 @@
+---
+title: "Getting Started with RII"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with RII}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## What RII is, and why this package exists
+
+The Relative Importance Index (RII) ranks a set of factors, causes or
+criteria that respondents have rated on a Likert scale. For item $j$:
+
+$$RII_j = \frac{\sum W_j}{A \times N_j}$$
+
+where $\sum W_j$ is the sum of the weights (raw Likert scores) given to
+item $j$ by all respondents, $A$ is the highest possible weight (5 on a
+5-point scale), and $N_j$ is the number of respondents who rated it. RII
+always falls between 0 and 1, which makes items directly comparable and
+rankable — this is why it is so widely used in environmental,
+construction and social-science surveys.
+
+Most researchers compute this in a spreadsheet: one `SUMPRODUCT` and one
+`COUNT` formula per item, copied down a column, then sorted by hand. The
+**RII** package does the same calculation from R, with automatic ranking
+and a ready-made chart, as a first step towards analysing survey data in
+R instead of Excel.
+
+## The example data
+
+The package ships a worked Nigerian example: 150 construction
+professionals across seven states rating ten perceived causes of building
+collapse on a 5-point scale (1 = Not significant, 5 = Extremely
+significant).
+
+```{r setup}
+library(RII)
+data(building_collapse_nigeria)
+head(building_collapse_nigeria[, 1:6])
+```
+
+## Ranking items from raw responses
+
+If you have one row per respondent and one column per item — the usual
+shape for data exported from Google Forms, KoboToolbox or a survey
+platform — pass those columns straight to `rii_table()`:
+
+```{r}
+items <- building_collapse_nigeria[, 5:14]
+tbl <- rii_table(items)
+tbl
+```
+
+The result is sorted by RII automatically, and each item is placed into
+one of the five importance bands used in the literature (Low,
+Medium-Low, Medium, High-Medium, High) via `classify_rii()` internally.
+
+`summary()` gives a quick narrative reading of the table:
+
+```{r}
+summary(tbl)
+```
+
+## A one-line entry point for messy real-world survey data
+
+Real exports usually mix Likert items with demographic/ID columns
+(gender, age, marital status...) that are numerically just as
+"Likert-like" as a real item — a gender column coded 1/2 looks no
+different to R than a real 2-point item. Typing out 30+ item column
+names by hand is tedious, so `items = "auto"` detects them from the
+common short-code naming convention (`OJ1`, `PJ6`, `JS1i`, ...) instead:
+
+```{r}
+set.seed(1)
+raw_survey <- data.frame(
+  `S/N` = 1:40, GENDER = sample(1:2, 40, TRUE),
+  MARITAL = sample(1:3, 40, TRUE),
+  OJ1 = sample(1:5, 40, TRUE), OJ2 = sample(1:5, 40, TRUE),
+  PJ6 = sample(1:5, 40, TRUE), JS1i = sample(1:5, 40, TRUE),
+  check.names = FALSE
+)
+
+# review the guess first
+detect_likert_items(raw_survey)
+
+# or just let rii_table() use it directly
+rii_table(raw_survey, items = "auto")
+```
+
+## Multiple constructs/sections in one questionnaire
+
+A longer questionnaire often has several distinct sections — e.g. "Road
+Surface Quality" (columns 4-10) and "Maintenance Practices" (columns
+11-13) — that should usually be ranked **separately**, since mixing two
+different constructs into one RII table isn't generally meaningful.
+`items` accepts a numeric column range for exactly this, so you can call
+`rii_table()` (or `read_rii_csv()`/`read_rii_excel()`/`read_rii_spss()`)
+once per section:
+
+```{r, eval = FALSE}
+d <- read.csv("road_infra_survey_raw.csv")   # read the whole file once
+
+road_quality <- rii_table(d, items = 4:10)   # Section 1
+maintenance  <- rii_table(d, items = 11:13)  # Section 2
+```
+
+Note that the column range has to be a real R argument (`items = 11:17`),
+not text appended to the file path — `read_rii_csv("file.csv[, 11:17]",
+...)` won't work, since indexing isn't part of a file name.
+
+## Text Likert labels ("Strongly Agree", "Disagree", ...)
+
+Many surveys (Google Forms exports especially) record responses as text
+rather than numbers. `recode_likert()` converts them, and can auto-detect
+which columns to convert:
+
+```{r}
+text_survey <- data.frame(
+  Gender = sample(c("Male", "Female"), 30, TRUE),
+  Q1 = sample(c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"), 30, TRUE),
+  Q2 = sample(c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"), 30, TRUE)
+)
+
+# review which columns it would recode, and using which scale
+detect_text_likert_items(text_survey)
+
+# recode, then rank — items = "auto" picks up exactly the recoded columns
+text_survey2 <- recode_likert(text_survey)
+rii_table(text_survey2, items = "auto")
+```
+
+Built-in wordings cover agreement (with or without "Neutral"/"Undecided"),
+frequency, satisfaction, importance and extent scales. For anything else,
+pass your own mapping: `recode_likert(d, cols = "Q1", mapping = c("no" =
+1, "maybe" = 2, "yes" = 3))`.
+
+## Ranking items from a frequency table
+
+Many spreadsheet RII templates don't keep raw respondent-level data —
+only a count of how many respondents chose each scale point for each
+item. `rii_table_freq()` works directly from that layout:
+
+```{r}
+freq <- data.frame(
+  Factor = c("Poor supervision", "Use of substandard materials"),
+  SD = c(2, 1), D = c(5, 4), N = c(10, 12), A = c(38, 40), SA = c(95, 93)
+)
+rii_table_freq(freq, item_col = "Factor")
+```
+
+## Reading straight from an Excel workbook
+
+If your data already lives in an `.xlsx` file — either layout — you can
+skip the import step entirely:
+
+```{r}
+raw_path <- system.file("extdata", "rii_raw_example.xlsx", package = "RII")
+read_rii_excel(raw_path, layout = "raw",
+                items = c("SubstandardMaterials", "PoorSupervision",
+                          "InadequateSoilInvestigation", "PoorWorkmanship"))
+```
+
+## Writing results back to Excel
+
+If you'd rather hand someone a spreadsheet than an R object, write the
+ranked table straight to `.xlsx`. Importance bands are colour-coded the
+way many published RII tables shade them, and the chart is embedded in
+the same sheet by default:
+
+```{r, eval = FALSE}
+out <- tempfile(fileext = ".xlsx")
+write_rii_excel(tbl, out)
+```
+
+## Plotting the ranking
+
+```{r, fig.alt = "Horizontal bar chart of RII values, sorted from highest to lowest"}
+plot(tbl, main = "Causes of Building Collapse in Nigeria")
+```
+
+Use `top_n` to show only the highest-ranked items, and `col` to change
+the bar colour for a different context:
+
+```{r, fig.alt = "Horizontal bar chart of the top five RII values"}
+plot(tbl, top_n = 5, col = "steelblue",
+     main = "Top 5 Causes of Building Collapse")
+```
+
+## Single-item building blocks
+
+If you want to build something custom, `rii_raw()` and `rii_freq()`
+compute the same statistics for one item at a time:
+
+```{r}
+rii_raw(items$PoorSupervision)
+rii_freq(c(2, 5, 10, 38, 95))
+```
+
+## A non-construction example, on a different scale
+
+RII is not specific to construction, and neither is this package. The
+second bundled dataset, `csa_adoption_barriers_nigeria`, is a survey of
+smallholder farmers rating barriers to climate-smart agriculture adoption
+— on a **4-point** scale rather than 5-point, to show that `scale_max`
+(and `scale_min`, for a 0-based or otherwise shifted scale) adapts to
+whatever instrument was actually used:
+
+```{r}
+data(csa_adoption_barriers_nigeria)
+csa_items <- csa_adoption_barriers_nigeria[, 6:15]
+csa_tbl <- rii_table(csa_items, scale_max = 4)
+csa_tbl
+```
+
+```{r, fig.alt = "Horizontal bar chart of RII values for barriers to climate-smart agriculture adoption"}
+plot(csa_tbl, main = "Barriers to Climate-Smart Agriculture Adoption",
+     col = "#6B8E23")
+```

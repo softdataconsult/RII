@@ -1,0 +1,90 @@
+#' Read Likert/RII data straight from an Excel spreadsheet
+#'
+#' Lets you go directly from the kind of Excel workbook typically used for
+#' RII (one sheet, one row per respondent or per item) to a ranked
+#' \code{\link{rii_table}}, without re-entering anything by hand.
+#' Two common spreadsheet layouts are supported via \code{layout}:
+#'
+#' \describe{
+#'   \item{\code{"raw"}}{One row per respondent, one column per item, each
+#'     cell holding that respondent's Likert score for that item (plus,
+#'     optionally, ID/profession/demographic columns you don't want
+#'     ranked). This is the layout produced by most survey export tools
+#'     (Google Forms, KoboToolbox, SurveyMonkey, Google Sheets).}
+#'   \item{\code{"freq"}}{One row per item/factor, one column per scale
+#'     point, each cell holding the count of respondents who chose that
+#'     point for that item — the layout used by most hand-built RII
+#'     spreadsheet templates, where column headers are often "SD", "D",
+#'     "N", "A", "SA" or "1".."5" and there is usually an existing (now
+#'     redundant) RII column that this function recomputes rather than
+#'     trusts.}
+#' }
+#'
+#' See also \code{\link{read_rii_csv}} for CSV files and
+#' \code{\link{read_rii_spss}} for SPSS \code{.sav} files.
+#'
+#' @param path Path to the \code{.xlsx} or \code{.xls} file.
+#' @param layout Either \code{"raw"} or \code{"freq"}; see Details.
+#' @param sheet Sheet name or index to read. Defaults to the first sheet.
+#' @param range Optional cell range to read (e.g. \code{"A1:F151"}), passed
+#'   to \code{\link[readxl]{read_excel}}, for workbooks with titles/notes
+#'   above or beside the data table.
+#' @param items For \code{layout = "raw"}: character vector of column
+#'   names, or numeric vector of column positions (e.g. \code{11:17} for
+#'   one section/construct of a longer questionnaire), to treat as the
+#'   items to rank (use this to exclude ID/profession/demographic
+#'   columns). Defaults to all numeric columns in the sheet. Pass
+#'   \code{"auto"} to have \code{\link{detect_likert_items}}
+#'   pick them for you — useful for a real survey export with many
+#'   demographic columns mixed in; see \code{\link{rii_table}}.
+#' @param item_col For \code{layout = "freq"}: name of the column holding
+#'   item labels (defaults to the first non-numeric column found).
+#' @param scale_max For \code{layout = "raw"}, the highest Likert point.
+#'   Defaults to 5.
+#' @param scale_min For \code{layout = "raw"}, the lowest Likert point.
+#'   Defaults to 1; set to \code{0} for a 0-based scale, or adjust for any
+#'   other range.
+#' @param reverse_items Optional character vector of item names/labels to
+#'   reverse-score before computing RII, for negatively-worded items. See
+#'   \code{\link{reverse_score}}.
+#' @param weights For \code{layout = "freq"}, the weight for each scale
+#'   column, in the order the columns appear. Defaults to
+#'   \code{1:number of scale columns}.
+#' @param recode_text Logical; if \code{TRUE}, run \code{\link{recode_likert}}
+#'   on the data right after reading it — auto-detecting and converting any
+#'   text Likert columns ("Strongly Agree", "Disagree", ...) to numeric —
+#'   before computing RII. Only applies when \code{layout = "raw"}.
+#'   Defaults to \code{FALSE}. Combine with \code{items = "auto"} for a
+#'   one-line read of a raw text-Likert survey export.
+#'
+#' @return An object of class \code{"rii_table"}; see
+#'   \code{\link{rii_table}}.
+#'
+#' @examples
+#' # One row per respondent (bundled example workbook)
+#' raw_path <- system.file("extdata", "rii_raw_example.xlsx", package = "RII")
+#' read_rii_excel(raw_path, layout = "raw",
+#'                 items = c("SubstandardMaterials", "PoorSupervision",
+#'                           "InadequateSoilInvestigation", "PoorWorkmanship"))
+#'
+#' # One row per factor, columns are counts for SD/D/N/A/SA
+#' freq_path <- system.file("extdata", "rii_freq_example.xlsx", package = "RII")
+#' read_rii_excel(freq_path, layout = "freq", item_col = "Factor")
+#'
+#' @export
+read_rii_excel <- function(path, layout = c("raw", "freq"), sheet = 1,
+                            range = NULL, items = NULL, item_col = NULL,
+                            scale_max = 5, scale_min = 1,
+                            reverse_items = NULL, weights = NULL,
+                            recode_text = FALSE) {
+  if (!requireNamespace("readxl", quietly = TRUE)) {
+    stop("Reading Excel files requires the 'readxl' package. ",
+         "Install it with install.packages(\"readxl\").", call. = FALSE)
+  }
+  layout <- match.arg(layout)
+  d <- readxl::read_excel(path, sheet = sheet, range = range)
+  d <- as.data.frame(d)
+
+  .rii_from_dataframe(d, layout, items, item_col, scale_max, scale_min,
+                       reverse_items, weights, recode_text = recode_text)
+}

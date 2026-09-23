@@ -1,0 +1,35 @@
+Package: RII
+Type: Package
+Title: Relative Importance Index for Likert-Scale Survey Data
+Version: 0.1.0
+Authors@R: person(given = "Isaac", family = "Ajao",
+    email = "softdataconsult@gmail.com",
+    role = c("aut", "cre"),
+    comment = c(ORCID = "0000-0002-3403-6082"))
+Description: Computes the Relative Importance Index (RII), together with
+    means, standard deviations and ranks, from Likert-scale survey data of
+    the kind widely used in environmental, construction, engineering and
+    social science research. RII is a simple 0-1 index defined as the sum
+    of respondent weights divided by (highest weight x number of
+    respondents); it is normally calculated by hand in a spreadsheet.
+    This package computes it from raw item-level responses, ready-made
+    frequency tables, or straight from an Excel, CSV or SPSS file, on any
+    Likert scale range and with optional reverse-scoring of negatively-
+    worded items. Real-world survey exports are handled directly: item
+    columns can be auto-detected from naming conventions or from text
+    Likert wording ("Strongly Agree", "Disagree", ...), even when mixed
+    in with demographic or ID columns. Items are ranked automatically,
+    classified into importance bands used in the literature, and rendered
+    as a publication-style bar chart or a formatted Excel workbook. Two
+    worked Nigerian examples are included, on construction and on
+    agriculture.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.1
+Depends: R (>= 3.5.0)
+Imports: stats, graphics, grDevices, utils
+Suggests: testthat (>= 3.0.0), readxl, openxlsx, haven, knitr, rmarkdown
+VignetteBuilder: knitr
+URL: https://github.com/softdataconsult/RII
+BugReports: https://github.com/softdataconsult/RII/issues

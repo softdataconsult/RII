@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this package in published work, please cite it as below."
+title: "RII: Relative Importance Index for Likert-Scale Survey Data"
+version: 0.1.0
+date-released: 2026-09-21
+authors:
+  - family-names: "Ajao"
+    given-names: "Isaac O."
+    affiliation: "Federal Polytechnic Ado-Ekiti; SoftData Consult"
+    orcid: "https://orcid.org/0000-0002-3403-6082"
+repository-code: "https://github.com/softdataconsult/RII"
+license: MIT
+keywords:
+  - "relative importance index"
+  - "Likert scale"
+  - "survey research"
+  - "R package"
